@@ -3523,8 +3523,8 @@ design rules under a new name.</description>
 <element name="R31" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="560" x="27.305" y="42.545" rot="MR0"/>
 <element name="C24" library="SparkFun" package="EIA7343" value="100uF" x="13.335" y="45.085" rot="MR270"/>
 <element name="C25" library="SparkFun" package="EIA7343" value="100uF" x="19.685" y="51.435" rot="MR270"/>
-<element name="R32" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="230" x="43.18" y="59.69" rot="R90"/>
-<element name="R33" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="115" x="40.64" y="59.69" rot="R270"/>
+<element name="R32" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="DNP" x="43.18" y="59.69" rot="R90"/>
+<element name="R33" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="0R" x="40.64" y="59.69" rot="R270"/>
 <element name="R34" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="230" x="38.1" y="59.69" rot="R90"/>
 <element name="R35" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="230" x="33.02" y="59.69" rot="R90"/>
 <element name="R36" library="resistor" library_urn="urn:adsk.eagle:library:348" package="R0603" package3d_urn="urn:adsk.eagle:package:26057/1" value="230" x="27.94" y="59.69" rot="R90"/>
