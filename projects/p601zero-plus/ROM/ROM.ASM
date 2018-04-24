@@ -28,9 +28,9 @@ sramini	ldx	#$A55A
 	ldx	$0
 	cpx	#$A55A
 	bne	sramin1
-	ldab	IO_SWKEYS
-	bitb	#1
-	beq	sramok
+;	ldab	IO_SWKEYS
+;	bitb	#1
+;	beq	sramok
 	bra	onbrom
 sramin1	inca
 	bne	sramini
