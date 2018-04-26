@@ -367,6 +367,7 @@ UsedLibrary="/home/sash/eagle/Eagle-Libraries/Vendors/SparkFun.lbr"
 UsedLibrary="x02-7000hc-4tg144i.lbr"
 UsedLibrary="memory-issi-asynsram.lbr"
 UsedLibrary="S29AL016J55TFI020.lbr"
+UsedLibrary="/home/sash/eagle/pdaxrom.lbr"
 
 [Win_1]
 Type="Control Panel"
