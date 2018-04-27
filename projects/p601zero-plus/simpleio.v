@@ -70,8 +70,8 @@ module simpleio (
 			if (cs) begin
 				if (rw) begin
 					case (AD[3:0])
-					4'b0001: DO <= led7hi;
-					4'b0010: DO <= led7lo;
+					4'b0001: DO <= ~led7hi;
+					4'b0010: DO <= ~led7lo;
 					4'b0011: begin
 						DO[2:0] <= ~rgb1;
 						end
@@ -85,8 +85,8 @@ module simpleio (
 					endcase
 				end else begin
 					case (AD[3:0])
-					4'b0001: led7hi <= DI;
-					4'b0010: led7lo <= DI;
+					4'b0001: led7hi <= ~DI;
+					4'b0010: led7lo <= ~DI;
 					4'b0011: begin
 						rgb1 <= ~DI[2:0];
 						end

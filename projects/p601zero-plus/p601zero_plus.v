@@ -17,6 +17,14 @@ module p601zero (
 	output			mosi,
 	input			miso,
 
+	output [19:0] SRAM_ADDR,
+	inout [15:0] SRAM_DATA,
+	output			SRAM_CE,
+	output			SRAM_OE,
+	output			SRAM_WE,
+	output			SRAM_UB,
+	output			SRAM_LB,
+
 /*	output			flash_mss,
 	output			flash_msck,
 	output			flash_mosi,
@@ -259,13 +267,45 @@ module p601zero (
 					(pageen ? (rampage_lock ? sys_rw : 1'b1) : 1'b1) &
 					(sysbooten ? (sysboot_lock ? sys_rw : 1'b1) : 1'b1);
 
-//	assign EXT_AD[16:0] = ext_vramcs ? {1'b0, VADDR} :
-//						  pageen   ? {1'b1, mempage[2:0], AD[12:0]} : {1'b0, AD};
+	wire [20:0] ram_addr = ext_vramcs ? {5'b00000, VADDR} :
+						  pageen   ? {5'b00001, mempage[2:0], AD[12:0]} : {5'b00000, AD};
+	wire cs_sram = (en_ext & sys_vma) | ext_vramcs;
 
-//	assign EXT_OE_n = ext_vramcs ? 1'b0 : ~((~sys_clk) &  (sys_rw));
-//	assign EXT_WE_n = ext_vramcs ? 1'b1 : ~((~sys_clk) & (~sys_rw));
-//	assign EXT_DQ   = ext_vramcs ? 8'bZ : (sys_rw) ? 8'bZ : DO;
-	assign DI = en_ext      ? sramd:
+/*
+	sram16_to_8 sram8_impl(
+		.Clock(sys_clk),
+		.ClockEn(cs_sram),
+		.WE(ext_vramcs ? 1'b0 : ((~sys_clk) & (~sys_rw))),
+		.Address(ram_addr),
+		.Data(DO),
+		.Q(sramd),
+		.ext_addr(SRAM_ADDR),
+		.ext_dq(SRAM_DATA),
+		.ext_ce_n(SRAM_CE),
+		.ext_oe_n(SRAM_OE),
+		.ext_we_n(SRAM_WE),
+		.ext_lb_n(SRAM_LB),
+		.ext_ub_n(SRAM_UB)
+	);
+*/
+
+
+	assign SRAM_LB = ram_addr[0];
+	assign SRAM_UB = ~ram_addr[0];
+
+	assign SRAM_ADDR = ram_addr[20:1];
+	assign SRAM_OE = ext_vramcs ? 1'b0 : ~((~sys_clk) &  (sys_rw));
+	assign SRAM_WE = ext_vramcs ? 1'b1 : ~((~sys_clk) & (~sys_rw));
+	assign SRAM_CE = 0; //~(cs_sram);
+	assign SRAM_DATA[7:0]   = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?8'bZ:DO;
+	assign SRAM_DATA[15:8] = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?DO:8'bZ;
+	
+//	assign SRAM_DATA[15:8] = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?8'bZ:8'b10101010;
+//	assign SRAM_DATA[7:0] = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?8'b01010101:8'bZ;
+
+	assign sramd = ram_addr[0]?SRAM_DATA[15:8]:SRAM_DATA[7:0];
+
+ 	assign DI = en_ext      ? sramd:
 				en_bram		? bramd:
 				en_brom		? bromd:
 				en_vpu		? vpud:
@@ -274,8 +314,6 @@ module p601zero (
 				en_sdcardio ? sdcardiod:
 				en_pagesel  ? pageseld:
 				8'b11111111;
-
-	assign SRAM_CS2 = (en_ext && sys_vma) | ext_vramcs;
 
 //	reg [2:0] extbus_clkdiv_cnt;
 //	reg dyn_clk;
