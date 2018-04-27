@@ -28,10 +28,7 @@ sramini	ldx	#$A55A
 	ldx	$0
 	cpx	#$A55A
 	bne	sramin1
-;	ldab	IO_SWKEYS
-;	bitb	#1
-;	beq	sramok
-	bra	onbrom
+	bra	sramok
 sramin1	inca
 	bne	sramini
 
@@ -41,7 +38,7 @@ onbrom	ldab	RAMPAGE_CTL
 	ldab	#$1C
 	stab	IO_L7HI
 sramok	staa	$2
-	staa	IO_L8BIT
+	staa	IO_L7LO
 
 ; setup stubs
 	ldx	#0

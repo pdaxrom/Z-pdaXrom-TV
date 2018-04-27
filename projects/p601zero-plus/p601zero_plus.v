@@ -153,9 +153,13 @@ module p601zero (
 		.VDATA(en_bram? bramd : sramd),
 		.vramcs(vpu_vramcs),
 		.hold(vpu_hold),
+		.bus_ready(~sys_vma),
 		
 		.tvout(tvout)
 	);
+
+//	assign vpu_vramcs = 0;
+//	assign vpu_hold = 0;
 
 	wire en_simpleio = DS5 && (AD[4] == 1'b0); // $E6A0
 	wire cs_simpleio = en_simpleio && sys_vma;
@@ -289,23 +293,20 @@ module p601zero (
 	);
 */
 
+	wire cpu_clk = vpu_hold ? 1'b1 : sys_clk;
 
 	assign SRAM_LB = ram_addr[0];
 	assign SRAM_UB = ~ram_addr[0];
 
 	assign SRAM_ADDR = ram_addr[20:1];
-	assign SRAM_OE = ext_vramcs ? 1'b0 : ~((~sys_clk) &  (sys_rw));
-	assign SRAM_WE = ext_vramcs ? 1'b1 : ~((~sys_clk) & (~sys_rw));
-	assign SRAM_CE = 0; //~(cs_sram);
-	assign SRAM_DATA[7:0]   = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?8'bZ:DO;
-	assign SRAM_DATA[15:8] = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?DO:8'bZ;
-	
-//	assign SRAM_DATA[15:8] = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?8'bZ:8'b10101010;
-//	assign SRAM_DATA[7:0] = ext_vramcs?8'bZ:sys_rw?8'bZ:ram_addr[0]?8'b01010101:8'bZ;
-
+	assign SRAM_OE = ext_vramcs ? 1'b0 : ~(sys_rw);
+	assign SRAM_WE = ext_vramcs ? 1'b1 :   (sys_rw);
+	assign SRAM_CE = ~((en_ext & sys_vma & (sys_rw  | cpu_clk)) | ext_vramcs);
+	assign SRAM_DATA[7:0]   = (ext_vramcs | sys_rw | (   ram_addr[0]))?8'bZ:DO;
+	assign SRAM_DATA[15:8] = (ext_vramcs | sys_rw | (~ram_addr[0]))?8'bZ:DO;
 	assign sramd = ram_addr[0]?SRAM_DATA[15:8]:SRAM_DATA[7:0];
 
- 	assign DI = en_ext      ? sramd:
+		assign DI = en_ext      ? sramd:
 				en_bram		? bramd:
 				en_brom		? bromd:
 				en_vpu		? vpud:
@@ -327,7 +328,7 @@ module p601zero (
 //	assign sys_clk = dyn_clk;
 //	assign sys_clk = sys_clk_out;
 
-	wire cpu_clk = vpu_hold ? 1'b1 : sys_clk;
+//	wire cpu_clk = vpu_hold ? 1'b1 : sys_clk;
 /*	
 	cpu68 mc6801 (
 		.clk(cpu_clk),

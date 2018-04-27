@@ -60,8 +60,8 @@ module simpleio (
 	always @ (posedge clk) begin
 		if (rst) begin
 			rgb1 <= 8'b111;
-			led7hi <= 0;
-			led7lo <= 0;
+			led7hi <= ~0;
+			led7lo <= ~0;
 			timer_mode <= 0;
 			timer_prescaler <= 0;
 		end else begin

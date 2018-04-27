@@ -9,7 +9,7 @@
 
 	include ../BOOTROM.INC
 
-	org $100
+	org $1000
 
 ;	lds	#$efef
 
@@ -22,7 +22,7 @@
 	ldx	#hello
 	int	F_PUTSTR
 
-	ldx	#$1000
+	ldx	#$2000
 	stx	RAM_START
 	ldx	#$E000
 	stx	RAM_END
