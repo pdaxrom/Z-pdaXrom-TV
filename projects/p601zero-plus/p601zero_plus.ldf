@@ -51,6 +51,9 @@
         <Source name="vrom.v" type="Verilog" type_short="Verilog">
             <Options/>
         </Source>
+        <Source name="sram.v" type="Verilog" type_short="Verilog" excluded="TRUE">
+            <Options/>
+        </Source>
         <Source name="impl1/impl1.xcf" type="Programming Project File" type_short="Programming">
             <Options/>
         </Source>
