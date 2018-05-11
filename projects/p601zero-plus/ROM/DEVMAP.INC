@@ -5,11 +5,9 @@
 
 ; SimpleIO module
 
-IO_L8BIT	equ	$E6A0
 IO_L7HI		equ	$E6A1
 IO_L7LO		equ	$E6A2
-IO_L2RGB	equ	$E6A3
-IO_SWKEYS	equ	$E6A4
+IO_LRGB		equ	$E6A3
 
 IO_TIM_CONFIG	equ	$E6A8
 IO_TIM_STATUS	equ	$E6A8
@@ -45,21 +43,13 @@ PS2_KIE		equ	$40
 PS2_KIQ		equ	$80
 
 ; SPI HOST
-SPI_STATUS	equ	$E6C0
-SPI_DATA	equ	$E6C1
-SPI_PRESCALER	equ	$E6C2
-SPI_REG		equ	$E6C3
+SDSPI_STATUS	equ	$E6C0
+SDSPI_CONFIG	equ	$E6C0
+SDSPI_DATA	equ	$E6C1
+SDSPI_PRESCALER	equ	$E6C2
 
-SPI_READY	equ	$80
-
-SPI_RES		equ	$01
-SPI_PSGBC1	equ	$10
-SPI_PSG		equ	$20
-SPI_SD		equ	$80
-
-; add other SPI devices to check if SPI in use
-SPI_ALL		equ	(SPI_SD | SPI_PSG)
-SPI_INI		equ	(SPI_SD | SPI_PSG | SPI_PSGBC1)
+SDSPI_READY	equ	$80
+SDSPI_SEL	equ	$01
 
 ; PAGE SELECTOR
 RAMPAGE_SEL	equ	$E6F0

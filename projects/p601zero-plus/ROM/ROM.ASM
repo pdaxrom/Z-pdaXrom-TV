@@ -72,7 +72,7 @@ copyswiv pula
 warmres	lds	#BROM_STACK
 
 ; reset spi/EXT devices
-	jsr	spi_reset
+;	jsr	spi_reset
 
 ; init putchar queue for control sequences
 	clr	QUEUELEN
@@ -110,20 +110,20 @@ ramtxt	jsr	putstr
 ;
 ; Trying to boot from SD
 ;
-	jsr	sd_init
-	tsta
-	bne	no_sd_boot
-	ldx	#txt_sd
-	jsr	putstr
+;	jsr	sd_init
+;	tsta
+;	bne	no_sd_boot
+;	ldx	#txt_sd
+;	jsr	putstr
 
-	ldx	#boot_sec
-	jsr	sd_read
-	tsta
-	bne	no_sd_boot
-	ldx	$2FE
-	cpx	#$55AA
-	bne	no_sd_boot
-	jsr	$13E
+;	ldx	#boot_sec
+;	jsr	sd_read
+;	tsta
+;	bne	no_sd_boot
+;	ldx	$2FE
+;	cpx	#$55AA
+;	bne	no_sd_boot
+;	jsr	$13E
 
 no_sd_boot ldx	#txt_nl
 	jsr	putstr
@@ -602,86 +602,34 @@ ret	pula
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Reset SPI/EXT devices
-spi_reset proc
-	psha
-	ldaa	#SPI_INI
-	oraa	SPI_REG
-	staa	SPI_REG
-
-	ldaa	SPI_REG
-	anda	#($FF^SPI_RES)
-	staa	SPI_REG
-
-	ldaa	SPI_REG
-	oraa	#SPI_RES
-	staa	SPI_REG
-	pula
-	rts
-	endp
-
-; Check if spi in use
-; Return:
-; A 0 - not used, 1 - busy
 ;
-spi_getstat proc
-	pshx
-	eora	#SPI_ALL
-	psha
-	anda	SPI_REG
-	tsx
-	cmpa	0,x
-	pula
-	beq	okay
-	ldaa	#1
-	bra	exit
-okay	clra
-exit	pulx
-	rts
-	endp
-
 ; Select spi device
-; A Device
-; B 1 Enable / 0 Disable
-; Return:
-; A status (0 - okay, 1 - busy)
-
-spi_select proc
-	psha
-	bsr	spi_getstat
+; A 1 Enable / 0 Disable
+sdspi_select proc
 	tsta
-	pula
-	beq	select
-	ldaa	#1
-	rts
-select	tstb
 	beq	disable
-	eora	#$FF
-	anda	SPI_REG
-	staa	SPI_REG
+	ldaa	SDSPI_CONFIG
+	oraa	#SDSPI_SEL
+	staa	SDSPI_CONFIG
 	bra	okay
-disable	oraa	SPI_REG
-	staa	SPI_REG
-okay	clra
-	rts
+disable	ldaa	SDSPI_CONFIG
+	anda	#($FF^SDSPI_SEL)
+	staa	SDSPI_CONFIG
+okay	rts
 	endp
 
-spi_write proc
-	global	spi_read
-	staa	SPI_DATA
-loop	ldaa	SPI_STATUS
-	bita	#SPI_READY
+sdspi_write proc
+	global	sdspi_read
+	staa	SDSPI_DATA
+loop	ldaa	SDSPI_STATUS
+	bita	#SDSPI_READY
 	beq	loop
-	ldaa	SPI_DATA
+	ldaa	SDSPI_DATA
 	rts
-spi_read ldaa	#$FF
-	bra	spi_write
+sdspi_read ldaa	#$FF
+	bra	sdspi_write
 	endp
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;
 sd_delay proc
 	pshx
 	ldx	#4000
@@ -699,10 +647,10 @@ sd_init	proc
 	pshb
 	pshx
 	ldaa	#40
-	staa	SPI_PRESCALER
+	staa	SDSPI_PRESCALER
 	jsr	sd_disable
 	ldab	#10
-loop	jsr	spi_read
+loop	jsr	sdspi_read
 	decb
 	bne	loop
 
@@ -741,21 +689,21 @@ sd_command proc
 	bsr	sd_enable
 
 	ldaa	0,x		; cmd
-	jsr	spi_write
+	jsr	sdspi_write
 	ldaa	1,x		; arg
-	jsr	spi_write
+	jsr	sdspi_write
 	ldaa	2,x		; arg
-	jsr	spi_write
+	jsr	sdspi_write
 	ldaa	3,x		; arg
-	jsr	spi_write
+	jsr	sdspi_write
 	ldaa	4,x		; arg
-	jsr	spi_write
+	jsr	sdspi_write
 	ldaa	5,x		; CRC
-	jsr	spi_write
+	jsr	sdspi_write
 
 	pshb
 	ldab	#10
-loop	jsr	spi_read
+loop	jsr	sdspi_read
 	cmpa	#$FF
 	bne	exit
 	decb
@@ -767,14 +715,11 @@ exit	pulb
 sd_enable proc
 	pshx
 	pshb
-	ldab	#1
-wait	ldaa	#SPI_SD
-	jsr	spi_select
-	tsta
-	bne	wait
-	jsr	spi_read
+wait	ldaa	#1
+	jsr	sdspi_select
+	jsr	sdspi_read
 	ldx	#5000
-loop	jsr	spi_read
+loop	jsr	sdspi_read
 	cmpa	#$FF
 	beq	exit
 	jsr	sd_delay
@@ -791,10 +736,9 @@ exit	inca
 sd_disable proc
 	pshb
 	psha
-	ldaa	#SPI_SD
-	ldab	#0
-	jsr	spi_select
-	jsr	spi_read
+	ldaa	#0
+	jsr	sdspi_select
+	jsr	sdspi_read
 	pula
 	pulb
 	rts
@@ -845,7 +789,7 @@ sd_read proc
 	bra	exit
 
 next	ldab	#255
-next1	jsr	spi_read
+next1	jsr	sdspi_read
 	cmpa	#$FF
 	bne	next2
 	jsr	sd_delay
@@ -859,8 +803,8 @@ next2	cmpa	#$FE
 	bra	exit
 next3	bsr	rcvr
 	bsr	rcvr
-	jsr	spi_read
-	jsr	spi_read
+	jsr	sdspi_read
+	jsr	sdspi_read
 	ldaa	#0
 
 exit	tsx
@@ -874,7 +818,7 @@ exit	tsx
 	rts
 
 rcvr	ldab	#0
-rcvr1	jsr	spi_read
+rcvr1	jsr	sdspi_read
 	staa	0,x
 	inx
 	decb
@@ -927,7 +871,7 @@ sd_write proc
 	bra	exit
 
 next	ldab	#255
-next1	jsr	spi_read
+next1	jsr	sdspi_read
 	cmpa	#$FF
 	beq	next2
 	jsr	sd_delay
@@ -936,12 +880,12 @@ next1	jsr	spi_read
 	ldaa	#2
 	bra	exit
 next2	ldaa	#$FE
-	jsr	spi_write
+	jsr	sdspi_write
 	bsr	xmit
 	bsr	xmit
-	jsr	spi_read
-	jsr	spi_read
-	jsr	spi_read
+	jsr	sdspi_read
+	jsr	sdspi_read
+	jsr	sdspi_read
 	anda	#$1F
 	cmpa	#$05
 	bne	next3
@@ -961,7 +905,7 @@ exit	tsx
 
 xmit	ldab	#0
 xmit1	ldaa	0,x
-	jsr	spi_write
+	jsr	sdspi_write
 	inx
 	decb
 	bne	xmit1
@@ -974,69 +918,6 @@ sd_flush proc
 	bne	exit
 	jsr	sd_disable
 exit	rts
-	endp
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-; Write to PSG
-; A - Address reg
-; B - Data
-;
-psg_send proc
-	global psg_write
-	psha
-	bsr	spi_send
-	bsr	bc1off
-	tba
-	bsr	spi_send
-	bsr	bc1on
-	tab
-	pula
-	rts
-
-psg_write pshx
-	pshb
-	psha
-	tab
-	clra
-loop	bsr	spi_send
-	bsr	bc1off
-	psha
-	ldaa	0,x
-	bsr	spi_send
-	bsr	bc1on
-	pula
-	inx
-	inca
-	decb
-	bne	loop
-	pula
-	pulb
-	pulx
-	rts
-
-spi_send pshb
-	staa	SPI_DATA
-busy	ldab	SPI_STATUS
-	bitb	#SPI_READY
-	beq	busy
-	pulb
-	rts
-
-bc1off	psha
-	ldaa	SPI_REG
-	anda	#($FF^SPI_PSGBC1)
-	staa	SPI_REG
-	pula
-	rts
-
-bc1on	psha
-	ldaa	SPI_REG
-	oraa	#SPI_PSGBC1
-	staa	SPI_REG
-	pula
-	rts
 	endp
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -1321,17 +1202,17 @@ romvecbeg
 	dw	uart_out
 	dw	vpuconfig
 	dw	vpucursor
-	dw	spi_reset
-	dw	spi_getstat
-	dw	spi_select
-	dw	spi_write
-	dw	spi_read
+	dw	0	;spi_reset
+	dw	0	;spi_getstat
+	dw	0	;spi_select
+	dw	0	;spi_write
+	dw	0	;spi_read
 	dw	sd_init
 	dw	sd_read
 	dw	sd_write
 	dw	sd_flush
-	dw	psg_send
-	dw	psg_write
+	dw	0	;psg_send
+	dw	0	;psg_write
 	dw	umult
 	dw	udiv
 	dw	bpt
