@@ -6,7 +6,7 @@ $(UNIASM):
 	make -C $(shell dirname $(UNIASM)) $(shell basename $(UNIASM))
 
 BOOTROM.INC: ROM.ASM
-	awk '{ if ($$1 == "romvecbeg") show=1; else if ($$1 == 'romvecend') show=0; else if (show == 1 && $$2 != "") printf "F_%s\tEQU\t$$%02X\n",toupper($$2),0xc0+cnt++; }' $^ > $@
+	awk '{ if ($$1 == "romvecbeg") show=1; else if ($$1 == 'romvecend') show=0; else if (show == 1 && $$2 != "") { if ($$2 == "0") cnt++; else printf "F_%s\tEQU\t$$%02X\n",toupper($$2),0xc0+cnt++; } }' $^ > $@
 
 rom.mem: ROM.ASM BOOTROM.INC DEVMAP.INC
 	$(UNIASM) ROM.ASM ROM.LST ROM.CMD
