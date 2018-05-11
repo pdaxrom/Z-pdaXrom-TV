@@ -7,7 +7,7 @@ FBTEXT		equ	$F550-40*27
 BROM_STACK	equ	FBTEXT-1
 
 		section $F550
-		ds	1
+SDMODE		ds	1
 		ds	1
 		ds	6
 
