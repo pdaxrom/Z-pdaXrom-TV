@@ -120,7 +120,7 @@ ramtxt	jsr	putstr
 	ldx	$2FE
 	cpx	#$55AA
 	bne	no_sd_boot
-	jsr	$13E
+	jsr	$100
 
 no_sd_boot ldx	#txt_nl
 	jsr	putstr
@@ -1313,7 +1313,7 @@ romvecbeg
 	dw	putstr
 romvecend
 
-boot_sec db	$00,$00,$00,$00
+boot_sec db	$00,$00,$00,$01
 	dw	$100
 
 pylogo		db	'Z/pdaXrom', 10, 13, '+ ', 0

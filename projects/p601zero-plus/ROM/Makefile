@@ -17,7 +17,7 @@ SCUBA = \
 	$(SCUBACMD)
 endif
 
-all: $(UNIASM) bootloader ../mcu_rom.v ../mcu_ram.v ../vrom.v ../mcu_pll.v ../vpu_cache.v KERNEL.SYS BOOTSEC.CMD
+all: $(UNIASM) bootloader ../mcu_rom.v ../mcu_ram.v ../vrom.v ../mcu_pll.v ../vpu_cache.v KERNEL.SYS BOOTSEC.CMD BOOTSECP.CMD
 
 $(UNIASM):
 	make -C $(shell dirname $(UNIASM)) $(shell basename $(UNIASM))
@@ -67,6 +67,9 @@ KERNEL.SYS: KERNEL.ASM BOOTROM.INC DEVMAP.INC FAT16.INC
 
 BOOTSEC.CMD: BOOTSEC.ASM BOOTROM.INC DEVMAP.INC FAT16.INC
 	$(UNIASM) BOOTSEC.ASM BOOTSEC BOOTSEC.CMD
+
+BOOTSECP.CMD: BOOTSECP.ASM BOOTROM.INC DEVMAP.INC FAT16.INC
+	$(UNIASM) BOOTSECP.ASM BOOTSECP BOOTSECP.CMD
 
 clean:
 	rm -f rom.bin *.LST *.CMD *.o *.mem bootloader ../mcu_rom.v ../mcu_ram.v ../vrom.v ../mcu_pll.v ../vpu_cache.v BOOTROM.INC *.SYS *.CMD
