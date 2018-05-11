@@ -1,6 +1,6 @@
 ;
-; BOOTROM for Z/pdaXrom
-; (c) sashz <sashz@pdaXrom.org>, 2017
+; BOOTROM for Z/pdaXrom hw 1.3
+; (c) sashz <sashz@pdaXrom.org>, 2018
 ;
 
 	include DEVMAP.INC
@@ -71,9 +71,6 @@ copyswiv pula
 
 warmres	lds	#BROM_STACK
 
-; reset spi/EXT devices
-;	jsr	spi_reset
-
 ; init putchar queue for control sequences
 	clr	QUEUELEN
 	ldx	#QUEUEBUF
@@ -110,20 +107,20 @@ ramtxt	jsr	putstr
 ;
 ; Trying to boot from SD
 ;
-;	jsr	sd_init
-;	tsta
-;	bne	no_sd_boot
-;	ldx	#txt_sd
-;	jsr	putstr
+	jsr	sd_init
+	tsta
+	bne	no_sd_boot
+	ldx	#txt_sd
+	jsr	putstr
 
-;	ldx	#boot_sec
-;	jsr	sd_read
-;	tsta
-;	bne	no_sd_boot
-;	ldx	$2FE
-;	cpx	#$55AA
-;	bne	no_sd_boot
-;	jsr	$13E
+	ldx	#boot_sec
+	jsr	sd_read
+	tsta
+	bne	no_sd_boot
+	ldx	$2FE
+	cpx	#$55AA
+	bne	no_sd_boot
+	jsr	$13E
 
 no_sd_boot ldx	#txt_nl
 	jsr	putstr
@@ -641,8 +638,22 @@ loop	dex
 
 sd_init_cmd0	db	$40, $00, $00, $00, $00, $95
 sd_init_cmd1	db	$41, $00, $00, $00, $00, $FF
+sd_init_cmd8	db	$48, $00, $00, $01, $AA, $87
 sd_init_cmd16	db	$50, $00, $00, $02, $00, $FF
+sd_init_cmd55	db	$77, $00, $00, $00, $00, $01
+sd_init_acmd41	db	$69, $40, $00, $00, $00, $00
+sd_init_cmd58	db	$7A, $00, $00, $00, $00, $00
 
+SD_CT_MMC	equ	$01
+SD_CT_SD1	equ	$02
+SD_CT_SD2	equ	$04
+SD_CT_BLOCK	equ	$08
+
+;
+; Initialize SD card
+; Return A - error code
+;        B - card type
+;
 sd_init	proc
 	pshb
 	pshx
@@ -658,27 +669,76 @@ loop	jsr	sdspi_read
 	ldab	#10
 loop1	jsr	sd_command
 	cmpa	#$01
-	beq	init2
+	beq	init_sdver
 	bsr	sd_delay
 	decb
 	bne	loop1
 	ldaa	#1
+	jmp	exit
+
+init_sdver ldx	#sd_init_cmd8
+	jsr	sd_command
+	cmpa	#$01
+	bne	init_mmc
+	bsr	sdspi_read
+	bsr	sdspi_read
+	bsr	sdspi_read
+	tab
+	bsr	sdspi_read
+	xgdx
+	cpx	#$AA01
+	beq	init_sdv2
+	ldaa	#$82
 	bra	exit
 
-init2	ldx	#sd_init_cmd1
-	ldab	#255
-loop2	jsr	sd_command
+init_sdv2 ldab	#$FF
+loop2	ldx	#sd_init_cmd55
+	jsr	sd_command
+	ldx	#sd_init_acmd41
+	jsr	sd_command
 	tsta
-	beq	init3
-	bsr	sd_delay
+	beq	init_ccs
+	jsr	sd_delay
 	decb
 	bne	loop2
+	ldaa	#$83
+	bra	exit
+
+init_ccs ldx	#sd_init_cmd58
+	jsr	sd_command
+	tsta
+	beq	init_ccs2
+	ldaa	#$84
+	bra	exit
+
+init_ccs2 jsr	sdspi_read
+	tab
+	jsr	sdspi_read
+	jsr	sdspi_read
+	jsr	sdspi_read
+
+	ldaa	#SD_CT_SD2
+	andb	#$40
+	beq	init_ccs2a
+	oraa	#SD_CT_BLOCK
+init_ccs2a staa	SDMODE
+	bra	noerr
+
+init_mmc ldx	#sd_init_cmd1
+	ldab	#255
+loop3	jsr	sd_command
+	tsta
+	beq	init_bsize
+	jsr	sd_delay
+	decb
+	bne	loop3
 	ldaa	#2
 	bra	exit
 
-init3	ldx	#sd_init_cmd16
+init_bsize ldx	#sd_init_cmd16
 	jsr	sd_command
-	clra
+	clr	SDMODE
+noerr	clra
 exit	pulx
 	pulb
 	bra	sd_disable
@@ -762,7 +822,20 @@ sd_read proc
 ;
 	ldaa	#$FF
 	psha
-	clra
+	ldaa	SDMODE
+	anda	#SD_CT_BLOCK
+	beq	mul512
+	ldaa	3,x
+	psha
+	ldaa	2,x
+	psha
+	ldaa	1,x
+	psha
+	ldaa	0,x
+	psha
+	bra	cmd17
+
+mul512	clra
 	psha
 	ldaa	3,x
 	rola
@@ -773,7 +846,8 @@ sd_read proc
 	ldaa	1,x
 	rola
 	psha
-	ldaa	#$51		; CMD17
+
+cmd17	ldaa	#$51		; CMD17
 	psha
 	ldx	4,x		; buffer
 	pshx
@@ -844,7 +918,20 @@ sd_write proc
 ;
 	ldaa	#$FF
 	psha
-	clra
+	ldaa	SDMODE
+	anda	#SD_CT_BLOCK
+	beq	mul512
+	ldaa	3,x
+	psha
+	ldaa	2,x
+	psha
+	ldaa	1,x
+	psha
+	ldaa	0,x
+	psha
+	bra	cmd24
+
+mul512	clra
 	psha
 	ldaa	3,x
 	rola
@@ -855,7 +942,8 @@ sd_write proc
 	ldaa	1,x
 	rola
 	psha
-	ldaa	#$58		; CMD24
+
+cmd24	ldaa	#$58		; CMD24
 	psha
 	ldx	4,x		; buffer
 	pshx

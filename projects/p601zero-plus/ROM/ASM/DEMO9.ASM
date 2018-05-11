@@ -169,8 +169,6 @@ loop1	jsr	sd_command
 	decb
 	bne	loop1
 	ldaa	#1
- ldab SDSPI_CONFIG
- int F_BPT
 	jmp	exit
 
 init_sdver ldx	#sd_init_cmd8
@@ -186,23 +184,19 @@ init_sdver ldx	#sd_init_cmd8
 	cpx	#$AA01
 	beq	init_sdv2
 	ldaa	#$82
-  int F_BPT
 	bra	exit
 
 init_sdv2 ldab	#$FF
 loop2	ldx	#sd_init_cmd55
 	jsr	sd_command
- int F_BPT
 	ldx	#sd_init_acmd41
 	jsr	sd_command
- int F_BPT
 	tsta
 	beq	init_ccs
 	jsr	sd_delay
 	decb
 	bne	loop2
 	ldaa	#$83
- int F_BPT
 	bra	exit
 
 init_ccs ldx	#sd_init_cmd58
@@ -210,7 +204,6 @@ init_ccs ldx	#sd_init_cmd58
 	tsta
 	beq	init_ccs2
 	ldaa	#$84
- int F_BPT
 	bra	exit
 
 init_ccs2 jsr	sdspi_read
@@ -235,7 +228,6 @@ loop3	jsr	sd_command
 	decb
 	bne	loop3
 	ldaa	#2
- int F_BPT
 	bra	exit
 
 init_bsize ldx	#sd_init_cmd16
