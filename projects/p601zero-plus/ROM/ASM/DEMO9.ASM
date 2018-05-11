@@ -38,19 +38,19 @@ nxt4
 
 
 	ldx	#read_sec
-	int	F_SD_READ
+	jsr	sd_read
 
 	int F_BPT
 
 	tsta
 	bne	rderr
 
-;	ldx	#read_sec2
-;	int	F_SD_READ
+	ldx	#read_sec2
+	jsr	sd_read
 
-;	int F_BPT
-;	tsta
-;	bne	rderr
+	int F_BPT
+	tsta
+	bne	rderr
 
 	ldx	#bye
 exit	int	F_PUTSTR
