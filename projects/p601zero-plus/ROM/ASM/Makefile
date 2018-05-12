@@ -5,7 +5,6 @@ all: $(UNIASM)		\
     DEMO9.CMD		\
     IRQTEST.CMD		\
     VIRQTEST.CMD	\
-    SPITEST.CMD		\
     RAMCHK.CMD		\
     RAMCHKX.CMD		\
     RAMTEST.CMD		\
@@ -19,12 +18,15 @@ all: $(UNIASM)		\
     MICROBASIC.CMD	\
     MICROBASICPLUS.CMD	\
     SDTEST.CMD		\
-    SDSECRW.CMD		\
     BOOTSEC.CMD		\
-    CHIPTUNE.CMD	\
-    ymstreamer		\
     FAT16.CMD		\
     cmd2srec
+
+#    SPITEST.CMD		\
+#    SDSECRW.CMD		\
+#    CHIPTUNE.CMD	\
+#    ymstreamer		\
+
 
 $(UNIASM):
 	make -C $(shell dirname $(UNIASM)) $(shell basename $(UNIASM))

@@ -47,20 +47,21 @@
 
 	cli
 
-loop	ldaa	IO_SWKEYS
-	staa	IO_L8BIT
-	bita	#1
-	beq	next
-	ldx	#but1txt
-	bra	print
-next	bita	#2
-	beq	next2
-	ldx	#but2txt
-	bra	print
-next2	bita	#4
-	beq	loop
-	ldx	#but3txt
-print	int	F_PUTSTR
+loop	wai
+;	ldaa	IO_SWKEYS
+;	staa	IO_L8BIT
+;	bita	#1
+;	beq	next
+;	ldx	#but1txt
+;	bra	print
+;next	bita	#2
+;	beq	next2
+;	ldx	#but2txt
+;	bra	print
+;next2	bita	#4
+;	beq	loop
+;	ldx	#but3txt
+;print	int	F_PUTSTR
 	bra	loop
 
 but1txt	db	'Button 1 pressed!', 10, 13, 0
