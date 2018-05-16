@@ -95,7 +95,7 @@ ARCHITECTURE CPU_ARCH OF cpu11 IS
 	exchange_state,
 	mul_state, mulea_state, muld_state, mul0_state,
 	idiv_state,
-	div1_state, div2_state, div3_state, div4_state, div5_state,
+	div1_state, div2_state, div3_state, div4_state, div5_state, div6_state,
 	jmp_state, jsr_state, jsr1_state,
 	branch_state, bsr_state, bsr1_state,
 	bitmask_state, brset_state, brclr_state,
@@ -141,7 +141,7 @@ ARCHITECTURE CPU_ARCH OF cpu11 IS
 	alu_sei, alu_cli, alu_sec, alu_clc, alu_sev, alu_clv,
 	alu_sex, alu_clx, alu_tpa, alu_tap,
 	alu_ld8, alu_st8, alu_ld16, alu_st16, alu_nop, alu_daa,
-	alu_bset, alu_bclr);
+	alu_bset, alu_bclr, alu_min);
 
 	SIGNAL op_code : std_logic_vector(7 DOWNTO 0);
 	SIGNAL pre_byte : std_logic_vector(7 DOWNTO 0);
@@ -790,6 +790,10 @@ BEGIN
 				out_alu <= left + ("00000000" & daa_reg);
 			WHEN alu_tpa =>
 				out_alu <= "00000000" & cc;
+			WHEN alu_min =>
+				IF left < right THEN out_alu <= left;
+				ELSE out_alu <= right;
+				END IF;
 			WHEN OTHERS =>
 				out_alu <= left; -- nop
 		END CASE;
@@ -3666,7 +3670,7 @@ BEGIN
 				dout_ctrl <= md_lo_dout;
 				next_state <= div1_state;
 				--
-				-- hear if Carry Clear from subtract
+				-- hear if no Carry from subtract
 				-- ACCD = MD << 1 + Carry
 				--
 			WHEN div4_state =>
@@ -3693,10 +3697,38 @@ BEGIN
 				next_state <= div1_state;
 
 				--
+				-- Get remainder
+				-- ACCD = MIN(ACCD, MD)
+				--
+			WHEN div5_state =>
+				-- default
+				ix_ctrl <= latch_ix;
+				iy_ctrl <= latch_iy;
+				sp_ctrl <= latch_sp;
+				pc_ctrl <= latch_pc;
+				iv_ctrl <= latch_iv;
+				count_ctrl <= latch_count;
+				op_ctrl <= latch_op;
+				pre_ctrl <= latch_pre;
+				ea_ctrl <= latch_ea;
+				md_ctrl <= latch_md;
+				-- complement quotient
+				left_ctrl <= accd_left;
+				right_ctrl <= md_right;
+				alu_ctrl <= alu_min;
+				cc_ctrl <= latch_cc;
+				acca_ctrl <= load_hi_acca;
+				accb_ctrl <= load_accb;
+				-- idle bus
+				addr_ctrl <= idle_ad;
+				dout_ctrl <= md_lo_dout;
+				next_state <= div6_state;
+
+				--
 				-- invert quotient in IX
 				-- IX = COM( IX )
 				--
-			WHEN div5_state =>
+			WHEN div6_state =>
 				-- default
 				acca_ctrl <= latch_acca;
 				accb_ctrl <= latch_accb;
