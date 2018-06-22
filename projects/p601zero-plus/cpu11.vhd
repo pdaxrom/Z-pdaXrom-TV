@@ -54,6 +54,9 @@
 -- Added by sashz (15 Jul 2017):
 -- Fixed mistyped prefix for page4 indexed state
 --
+-- Added by sashz (22 Jun 2018):
+-- Fixed IDIV and MUL
+--
 
 LIBRARY ieee;
 USE ieee.std_logic_1164.ALL;
@@ -95,7 +98,7 @@ ARCHITECTURE CPU_ARCH OF cpu11 IS
 	exchange_state,
 	mul_state, mulea_state, muld_state, mul0_state,
 	idiv_state,
-	div1_state, div2_state, div3_state, div4_state, div5_state, div6_state,
+	div1_state, div2_state, div3_state, div4_state, div5_state,
 	jmp_state, jsr_state, jsr1_state,
 	branch_state, bsr_state, bsr1_state,
 	bitmask_state, brset_state, brclr_state,
@@ -121,7 +124,7 @@ ARCHITECTURE CPU_ARCH OF cpu11 IS
 	TYPE acca_type IS (reset_acca, load_acca, load_hi_acca, pull_acca, latch_acca);
 	TYPE accb_type IS (reset_accb, load_accb, pull_accb, latch_accb);
 	TYPE cc_type IS (reset_cc, load_cc, pull_cc, latch_cc);
-	TYPE ix_type IS (reset_ix, load_ix, pull_lo_ix, pull_hi_ix, latch_ix);
+	TYPE ix_type IS (reset_ix, load_ix, pull_lo_ix, pull_hi_ix, latch_ix, load_ix_idiv);
 	TYPE iy_type IS (reset_iy, load_iy, pull_lo_iy, pull_hi_iy, latch_iy);
 	TYPE sp_type IS (reset_sp, latch_sp, load_sp);
 	TYPE pc_type IS (reset_pc, latch_pc, load_pc, pull_lo_pc, pull_hi_pc, incr_pc);
@@ -141,7 +144,7 @@ ARCHITECTURE CPU_ARCH OF cpu11 IS
 	alu_sei, alu_cli, alu_sec, alu_clc, alu_sev, alu_clv,
 	alu_sex, alu_clx, alu_tpa, alu_tap,
 	alu_ld8, alu_st8, alu_ld16, alu_st16, alu_nop, alu_daa,
-	alu_bset, alu_bclr, alu_min);
+	alu_bset, alu_bclr, alu_mindiv, alu_div, alu_mul);
 
 	SIGNAL op_code : std_logic_vector(7 DOWNTO 0);
 	SIGNAL pre_byte : std_logic_vector(7 DOWNTO 0);
@@ -270,6 +273,8 @@ BEGIN
 					xreg(15 DOWNTO 8) <= data_in;
 				WHEN pull_lo_ix =>
 					xreg(7 DOWNTO 0) <= data_in;
+				WHEN load_ix_idiv =>
+					xreg <= NOT xreg;
 				WHEN OTHERS =>
 					--	 when latch_ix =>
 					xreg <= xreg;
@@ -757,10 +762,10 @@ BEGIN
 
 		CASE alu_ctrl IS
 			WHEN alu_add8 | alu_adc | alu_inc |
-				alu_add16 | alu_inc16 =>
+				alu_add16 | alu_inc16 | alu_mul =>
 				out_alu <= left + right + ("000000000000000" & carry_in);
 			WHEN alu_sub8 | alu_sbc | alu_dec |
-				alu_sub16 | alu_dec16 =>
+				alu_sub16 | alu_dec16 | alu_div =>
 				out_alu <= left - right - ("000000000000000" & carry_in);
 			WHEN alu_and =>
 				out_alu <= left AND right; -- and/bit
@@ -790,10 +795,8 @@ BEGIN
 				out_alu <= left + ("00000000" & daa_reg);
 			WHEN alu_tpa =>
 				out_alu <= "00000000" & cc;
-			WHEN alu_min =>
-				IF left < right THEN out_alu <= left;
-				ELSE out_alu <= right;
-				END IF;
+			WHEN alu_mindiv =>
+				out_alu <= left;
 			WHEN OTHERS =>
 				out_alu <= left; -- nop
 		END CASE;
@@ -814,7 +817,7 @@ BEGIN
 				cc_out(CBIT) <= (left(15) AND right(15)) OR
 				(left(15) AND NOT out_alu(15)) OR
 				(right(15) AND NOT out_alu(15));
-			WHEN alu_sub16 =>
+			WHEN alu_sub16 | alu_div =>
 				cc_out(CBIT) <= ((NOT left(15)) AND right(15)) OR
 				((NOT left(15)) AND out_alu(15)) OR
 				(right(15) AND out_alu(15));
@@ -829,6 +832,8 @@ BEGIN
 			WHEN alu_neg | alu_clr =>
 				cc_out(CBIT) <= out_alu(7) OR out_alu(6) OR out_alu(5) OR out_alu(4) OR
 				out_alu(3) OR out_alu(2) OR out_alu(1) OR out_alu(0);
+			WHEN alu_mul =>
+				cc_out(CBIT) <= out_alu(7);
 			WHEN alu_daa =>
 				IF (daa_reg(7 DOWNTO 4) = "0110") THEN
 					cc_out(CBIT) <= '1';
@@ -841,6 +846,12 @@ BEGIN
 				cc_out(CBIT) <= '0';
 			WHEN alu_tap =>
 				cc_out(CBIT) <= left(CBIT);
+			WHEN alu_mindiv =>
+				cc_out(CBIT) <= NOT (ea(15) OR ea(14) OR ea (13) OR ea(12) OR
+									 ea(11) OR ea(10) OR ea(9)   OR ea(8)  OR
+									 ea(7)  OR ea(6)  OR ea(5)   OR ea(4)  OR
+									 ea(3)  OR ea(2)  OR ea(1)   OR ea(0));
+
 			WHEN OTHERS => -- carry is not affected by cpx
 				cc_out(CBIT) <= cc(CBIT);
 		END CASE;
@@ -861,13 +872,20 @@ BEGIN
 			WHEN alu_add16 | alu_sub16 |
 				alu_lsl16 | alu_lsr16 |
 				alu_inc16 | alu_dec16 |
-				alu_ld16 | alu_st16 =>
+				alu_ld16 | alu_st16  |
+				alu_div =>
 				cc_out(ZBIT) <= NOT(out_alu(15) OR out_alu(14) OR out_alu(13) OR out_alu(12) OR
 				out_alu(11) OR out_alu(10) OR out_alu(9) OR out_alu(8) OR
 				out_alu(7) OR out_alu(6) OR out_alu(5) OR out_alu(4) OR
 				out_alu(3) OR out_alu(2) OR out_alu(1) OR out_alu(0));
 			WHEN alu_tap =>
 				cc_out(ZBIT) <= left(ZBIT);
+			WHEN alu_mindiv =>
+				cc_out(ZBIT) <= xreg(15) OR xreg(14) OR xreg(13) OR xreg(12) OR
+					            xreg(11) OR xreg(10) OR xreg(9)  OR xreg(8)  OR
+					            xreg(7)  OR xreg(6)  OR xreg(5)  OR xreg(4)  OR
+					            xreg(3)  OR xreg(2)  OR xreg(1)  OR xreg(0);
+
 			WHEN OTHERS =>
 				cc_out(ZBIT) <= cc(ZBIT);
 		END CASE;
@@ -963,6 +981,8 @@ BEGIN
 				cc_out(VBIT) <= '0';
 			WHEN alu_sev =>
 				cc_out(VBIT) <= '1';
+			WHEN alu_mindiv =>
+				cc_out(VBIT) <= '0';
 			WHEN OTHERS =>
 				cc_out(VBIT) <= cc(VBIT);
 		END CASE;
@@ -3521,7 +3541,7 @@ BEGIN
 				-- if ea bit(count) set, add accd to md
 				left_ctrl <= accd_left;
 				right_ctrl <= md_right;
-				alu_ctrl <= alu_add16;
+				alu_ctrl <= alu_mul;
 				IF ea_bit = '1' THEN
 					cc_ctrl <= load_cc;
 					acca_ctrl <= load_hi_acca;
@@ -3599,7 +3619,7 @@ BEGIN
 				-- subtract denominator from numerator
 				left_ctrl <= accd_left;
 				right_ctrl <= ea_right;
-				alu_ctrl <= alu_sub16;
+				alu_ctrl <= alu_div;
 				cc_ctrl <= load_cc;
 				md_ctrl <= load_md; -- md = temporary result
 				-- idle bus
@@ -3702,7 +3722,6 @@ BEGIN
 				--
 			WHEN div5_state =>
 				-- default
-				ix_ctrl <= latch_ix;
 				iy_ctrl <= latch_iy;
 				sp_ctrl <= latch_sp;
 				pc_ctrl <= latch_pc;
@@ -3713,40 +3732,17 @@ BEGIN
 				ea_ctrl <= latch_ea;
 				md_ctrl <= latch_md;
 				-- complement quotient
-				left_ctrl <= accd_left;
-				right_ctrl <= md_right;
-				alu_ctrl <= alu_min;
-				cc_ctrl <= latch_cc;
+				IF (acca & accb) < md THEN
+					left_ctrl <= accd_left;
+				ELSE
+					left_ctrl <= md_left;
+				END IF;
+				right_ctrl <= zero_right;
+				alu_ctrl <= alu_mindiv;
+				cc_ctrl <= load_cc;
 				acca_ctrl <= load_hi_acca;
 				accb_ctrl <= load_accb;
-				-- idle bus
-				addr_ctrl <= idle_ad;
-				dout_ctrl <= md_lo_dout;
-				next_state <= div6_state;
-
-				--
-				-- invert quotient in IX
-				-- IX = COM( IX )
-				--
-			WHEN div6_state =>
-				-- default
-				acca_ctrl <= latch_acca;
-				accb_ctrl <= latch_accb;
-				iy_ctrl <= latch_iy;
-				sp_ctrl <= latch_sp;
-				pc_ctrl <= latch_pc;
-				iv_ctrl <= latch_iv;
-				count_ctrl <= latch_count;
-				op_ctrl <= latch_op;
-				pre_ctrl <= latch_pre;
-				ea_ctrl <= latch_ea;
-				md_ctrl <= latch_md;
-				-- complement quotient
-				left_ctrl <= ix_left;
-				right_ctrl <= ea_right;
-				alu_ctrl <= alu_com;
-				cc_ctrl <= load_cc;
-				ix_ctrl <= load_ix;
+				ix_ctrl <= load_ix_idiv;
 				-- idle bus
 				addr_ctrl <= idle_ad;
 				dout_ctrl <= md_lo_dout;
